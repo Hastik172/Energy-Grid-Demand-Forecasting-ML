@@ -1,138 +1,72 @@
-# Energy Grid Demand & Renewable Power Forecasting with Uncertainty Quantification
+# GridSense — Energy Grid Demand & Renewable Power Forecasting with Uncertainty Quantification
+## 21CSC305P Machine Learning Mini Project (Unit 1 Foundations)
 
-## Unit 1: Machine Learning & Probability Theory Project
-
-A complete beginner-to-intermediate Machine Learning project designed around **Unit 1 ML and Probability Theory** topics. This system analyzes historical electricity demand and renewable energy generation data, predicts future energy demand, and quantifies the uncertainty of predictions using probability distributions, variance, quantiles, and prediction intervals.
-
----
-
-## Project Structure
-
-```
-ML 1/
-├── main.py                          # Full pipeline runner (all 21 sections)
-├── dashboard.py                     # Interactive terminal dashboard
-├── generate_notebook.py             # Jupyter notebook generator
-├── Energy_Grid_Forecasting_Unit1_ML.ipynb  # Complete Jupyter Notebook
-├── README.md                        # This file
-│
-├── data/
-│   ├── generate_dataset.py          # Realistic energy dataset generator
-│   ├── data_loader.py               # Adaptive column-mapping data loader
-│   └── energy_grid_dataset.csv      # Generated dataset (8,760 hourly records)
-│
-├── src/
-│   ├── __init__.py
-│   ├── preprocessing.py             # Data cleaning, feature engineering, train/test split
-│   ├── continuous_analysis.py       # Continuous RV statistics, PDF fitting
-│   ├── probability_analysis.py      # Probability events, Bayes, independence, covariance
-│   ├── models.py                    # Polynomial fitting, supervised regression, K-Means
-│   ├── uncertainty.py               # Residual analysis, prediction intervals
-│   └── visualizer.py                # All 12 required visualizations
-│
-└── figures/                         # Generated visualization PNGs
-    ├── 01_demand_timeseries.png
-    ├── 02_renewable_generation.png
-    ├── 03_demand_histogram.png
-    ├── 04_probability_density.png
-    ├── 05_demand_vs_temperature.png
-    ├── 06_polynomial_regression_curve.png
-    ├── 07_discrete_pmf.png
-    ├── 08_bayes_probability.png
-    ├── 09_clustering_visualization.png
-    ├── 10_actual_vs_predicted_demand.png
-    ├── 11_prediction_error_distribution.png
-    └── 12_prediction_interval_uncertainty.png
-```
+A complete, production-grade Machine Learning system designed specifically around **Unit 1 ML & Probability Theory** topics. Analyzes 8,760 hours of electrical load and renewable energy data, provides point forecasts and calibrated 90% empirical prediction intervals, and includes dedicated interactive labs for each syllabus feature.
 
 ---
 
-## Unit 1 Topics Covered
+## What's New: Full System Architecture (Matching Benchmark Standard)
 
-| # | Topic | Project Section |
-|---|-------|----------------|
-| 1 | What is Machine Learning | Introduction & Problem Statement |
-| 2 | Supervised Learning | Linear & Polynomial Regression (Section 16) |
-| 3 | Unsupervised Learning | K-Means Clustering (Section 17) |
-| 4 | Polynomial Curve Fitting | Temperature → Demand fitting (Section 15) |
-| 5 | Probability Theory | Fundamental rules with energy events (Section 7) |
-| 6 | Discrete Random Variables | 3-state demand PMF/CDF (Section 8) |
-| 7 | Fundamental Rules of Probability | P(A), P(B), P(A∩B), P(A∪B), Addition Rule (Section 7) |
-| 8 | Bayes' Rule | P(High Demand \| High Temp) (Section 9) |
-| 9 | Independence | Pairwise & conditional independence tests (Section 10) |
-| 10 | Continuous Random Variables | Demand/Temperature/Solar/Wind analysis (Section 11) |
-| 11 | Quantiles | 5th, 25th, 50th, 75th, 95th percentiles (Section 12) |
-| 12 | Mean and Variance | Sample statistics for all variables (Section 12) |
-| 13 | Probability Density Functions | Gaussian PDF vs KDE (Section 13) |
-| 14 | Expectation and Covariance | E[X], Cov(X,Y), Corr(X,Y) (Section 14) |
-
----
-
-## How to Run
-
-### Prerequisites
-```bash
-pip install numpy pandas matplotlib seaborn scikit-learn scipy
-```
-
-### 1. Generate Dataset (if not present)
-```bash
-python data/generate_dataset.py
-```
-
-### 2. Run Full Pipeline
-```bash
-python main.py
-```
-
-### 3. Interactive Dashboard
-```bash
-python dashboard.py
-```
-
-### 4. Jupyter Notebook
-```bash
-# Install Jupyter if needed:
-pip install jupyter
-jupyter notebook Energy_Grid_Forecasting_Unit1_ML.ipynb
-```
+The project has been elevated to match the standard of top-tier student projects (like **GlucoSense**), featuring:
+1. **Interactive Multi-Tab Web Application (`backend/app.py` + `frontend/index.html`):**
+   * **Landing Page:** Animated diurnal load waves, headline metrics (8,760 rows, 8 features, $R^2 = 0.809$, $89.95\%$ coverage).
+   * **Data Tab:** Interactive raw dataset viewer and per-column descriptive statistics.
+   * **Bayes Lab:** 100-dot visual icon arrays (Prior vs. Posterior), interactive condition pills, step-by-step Bayes formulas, and likelihood ratios.
+   * **Distributions Lab:** Continuous random variable visualizer with dynamic **Quantile Slider $Q(p)$**, histogram densities, Gaussian & KDE fits, and moments.
+   * **Curve-Fitting Lab (Bishop §1.1):** Interactive **Polynomial Order Slider ($M = 1$ to $9$)**, regularisation ($\ln \lambda$), sample size selector, and live train vs. test RMSE overfitting diagnostics.
+   * **Forecaster / Screener:** Weather parameter sliders, preset test profiles, real-time demand prediction, 90% prediction interval bar, and feature contribution multipliers.
+   * **Test-Set Report:** Test set evaluation ($R^2$, RMSE, MAE, coverage), parity plots, residual error distribution, and scikit-learn parity verification.
+   * **All Graphs Gallery:** 12 project plots with tabbed explanations (`What it shows`, `How it's computed`, `How to read it`, `Where it's used in real grid operations`).
+2. **FastAPI Backend & Swagger UI (`/docs`):**
+   * Interactive OpenAPI documentation served live at `http://127.0.0.1:8001/docs`.
+3. **From-Scratch Mathematical Engines (`backend/models_from_scratch.py`):**
+   * Normal equation solver $(\mathbf{\Phi}^T \mathbf{\Phi} + \lambda \mathbf{I})\mathbf{w} = \mathbf{\Phi}^T \mathbf{t}$, Bayes inference, continuous sample moments with Bessel's correction, and Pearson correlation.
+4. **Console Training Runner (`python -m backend.train`):**
+   * Detailed logging of data loading, probability verification, model fitting, and graph generation.
+5. **Automated Test Suite (`python -m pytest -v`):**
+   * 17 automated tests verifying custom models against Scikit-learn and NumPy identities.
+6. **Project Showcase & Output Screenshots (`OUTPUT_SCREENSHOTS_DOCUMENT.md` & `OUTPUT_SCREENSHOTS_SHOWCASE.html`):**
+   * Full documentation mirroring the 14-page project presentation standard.
 
 ---
 
-## Key Results
+## Quickstart: How to Run
 
-- **Supervised Model R² = 0.809** (Feature-Engineered Polynomial Regression)
-- **90% Prediction Interval Coverage = 89.95%** (close to nominal 90%)
-- **Bayes' Rule**: High temperature increases high-demand probability by **1.79x**
-- **K-Means identifies 4 grid regimes**: Winter Heating, Summer Cooling, Solar Daytime, Windy Transition
-- **Kolmogorov Addition Rule verified with 0.0 discrepancy**
+### 1. Launch the Interactive Web Dashboard & Swagger Docs
+```powershell
+uvicorn backend.app:app --reload --port 8001
+```
+* **Interactive Dashboard:** Open your browser at [http://127.0.0.1:8001](http://127.0.0.1:8001)
+* **Interactive REST API Docs (Swagger UI):** Open [http://127.0.0.1:8001/docs](http://127.0.0.1:8001/docs)
 
----
+### 2. Run the Full Training Pipeline (Console Log)
+```powershell
+python -m backend.train
+```
 
-## Technology Stack
+### 3. Run Automated Tests
+```powershell
+python -m pytest -v
+```
+*(All 17 tests pass with 100% success rate validating from-scratch models against scikit-learn).*
 
-- Python 3.12
-- Pandas, NumPy
-- Matplotlib, Seaborn
-- Scikit-learn
-- SciPy
+### 4. Test Live Prediction via cURL / API
+```powershell
+curl -X POST http://127.0.0.1:8001/api/predict `
+     -H "Content-Type: application/json" `
+     -d '{"temperature": 34.0, "solar_generation": 4800, "wind_generation": 450, "hour": 14, "month": 7, "day_of_week": 2, "is_weekend": 0}'
+```
 
-**No deep learning or advanced algorithms used.** All methods are within Unit 1 scope.
-
----
-
-## Dataset
-
-Synthetically generated with physical equations modeling:
-- **8,760 hourly records** (full year 2023)
-- **Thermodynamic U-curve** temperature-demand relationship (heating + cooling)
-- **Solar generation** following solar elevation geometry and cloud attenuation
-- **Wind power** following Weibull distribution and standard turbine power curves
-- **Weather features**: Temperature, Humidity, Wind Speed, Cloud Cover
-- **Realistic imperfections**: 25 missing values, 5 duplicate rows
+### 5. View Output Screenshots Showcase
+Open [`OUTPUT_SCREENSHOTS_SHOWCASE.html`](file:///c:/Users/Hastik%20Pangi/Downloads/ML%201/OUTPUT_SCREENSHOTS_SHOWCASE.html) in your browser or read [`OUTPUT_SCREENSHOTS_DOCUMENT.md`](file:///c:/Users/Hastik%20Pangi/Downloads/ML%201/OUTPUT_SCREENSHOTS_DOCUMENT.md).
 
 ---
 
-## Author
+## Key Results Summary
 
-B.Tech CSE — Unit 1 Machine Learning & Probability Theory Project
+* **Test $R^2$ Score:** `0.8092` (Supervised feature-engineered polynomial model)
+* **Test RMSE:** `1,570.08 MW` | **Test MAE:** `1,332.72 MW`
+* **90% Empirical Prediction Interval Coverage:** `89.95%` (Well-calibrated uncertainty envelope)
+* **Kolmogorov Addition Rule Discrepancy:** `0.00e+00` (Exact axiomatic verification)
+* **Bayes Risk Multiplier:** `1.79x` (Heatwaves increase high-demand posterior to 44.8% vs. 25.0% prior)
+* **Scikit-Learn vs. From-Scratch Parity:** $\max |w_{\text{ours}} - w_{\text{sklearn}}| = 2.73 \times 10^{-10}$

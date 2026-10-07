@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GridSense — Energy Grid Demand & Renewable Power Forecasting</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #070b14;
+            --card-dark: #0f172a;
+            --card-border: #1e293b;
+            --card-hover: #1e2942;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-cyan: #06b6d4;
+            --accent-blue: #38bdf8;
+            --accent-orange: #f97316;
+            --accent-green: #10b981;
+            --accent-purple: #8b5cf6;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .navbar-custom {
+            background-color: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .nav-link {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.92rem;
+            padding: 8px 16px !important;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: var(--text-primary);
+            background-color: #1e293b;
+        }
+        .nav-link.active {
+            color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        /* Hero / Header */
+        .hero-title {
+            font-size: 3.4rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1.08;
+            background: linear-gradient(135deg, #ffffff 30%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero-badge {
+            display: inline-block;
+            font-size: 0.78rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            background: rgba(6, 182, 212, 0.08);
+            padding: 5px 14px;
+            border-radius: 20px;
+            margin-bottom: 16px;
+        }
+
+        /* Cards */
+        .card-custom {
+            background-color: var(--card-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            transition: border-color 0.2s ease;
+        }
+        .card-custom:hover {
+            border-color: #334155;
+        }
+
+        /* Metric Numbers */
+        .metric-big {
+            font-size: 2.6rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+        }
+        .metric-sub {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+
+        /* Icon Array (10x10 grid) */
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 6px;
+            width: fit-content;
+        }
+        .grid-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: #1e293b;
+            transition: background-color 0.3s ease;
+        }
+        .grid-dot.active-prior {
+            background-color: #0284c7;
+        }
+        .grid-dot.active-posterior {
+            background-color: var(--accent-orange);
+            box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
+        }
+
+        /* Sliders */
+        .form-range::-webkit-slider-thumb {
+            background: var(--accent-cyan);
+        }
+
+        /* Custom Tabs */
+        .section-view {
+            display: none;
+        }
+        .section-view.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Confidence bar */
+        .band-container {
+            position: relative;
+            height: 22px;
+            background: #1e293b;
+            border-radius: 11px;
+            overflow: hidden;
+        }
+        .band-interval {
+            position: absolute;
+            height: 100%;
+            background: linear-gradient(90deg, #0284c7, #38bdf8);
+            border-radius: 11px;
+            opacity: 0.85;
+            transition: all 0.3s ease;
+        }
+        .band-point {
+            position: absolute;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            background: #ef4444;
+            box-shadow: 0 0 10px #ef4444;
+            transition: all 0.3s ease;
+        }
+
+        /* Pill Buttons */
+        .pill-btn {
+            background: #1e293b;
+            border: 1px solid var(--card-border);
+            color: var(--text-secondary);
+            font-size: 0.84rem;
+            padding: 7px 16px;
+            border-radius: 20px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .pill-btn:hover, .pill-btn.active {
+            background: var(--accent-cyan);
+            color: #000;
+            border-color: var(--accent-cyan);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-custom py-2">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center text-light fw-bold" href="#" onclick="showSection('landing')">
+                <i class="bi bi-lightning-charge-fill text-info me-2 fs-4"></i>
+                <span style="letter-spacing: -0.03em; font-size: 1.25rem;">GridSense</span>
+            </a>
+            <button class="navbar-toggler text-light" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="collapse navbar-collapse" id="navMenu">
+                <ul class="navbar-nav mx-auto">
+                    <li class="nav-item"><a class="nav-link active" onclick="showSection('landing')">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showSection('data')">Data</a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showSection('bayes')">Bayes lab</a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showSection('distributions')">Distributions</a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showSection('polyfit')">Curve fitting</a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showSection('forecaster')">Forecaster</a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showSection('report')">Report</a></li>
+                    <li class="nav-item"><a class="nav-link" onclick="showSection('graphs')">All graphs</a></li>
+                </ul>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="/docs" target="_blank" class="btn btn-sm btn-outline-secondary px-3" style="border-radius: 20px; font-size: 0.82rem;">
+                        <i class="bi bi-braces me-1"></i> API Docs
+                    </a>
+                    <button class="btn btn-sm btn-info px-3 fw-bold" style="border-radius: 20px; font-size: 0.82rem;" onclick="showSection('graphs')">
+                        All graphs →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTAINER -->
+    <div class="container-fluid px-4 py-4">
+
+        <!-- ==================== 1. LANDING PAGE ==================== -->
+        <div id="section-landing" class="section-view active">
+            <div class="row align-items-center my-4 py-4">
+                <div class="col-lg-7 pe-lg-5">
+                    <div class="hero-badge">Bayes' Rule · Continuous RV · Quantiles · Bishop §1.1</div>
+                    <h1 class="hero-title mb-4">Forecast the load.<br>Quantify the uncertainty.<br>Balance the grid.</h1>
+                    <p class="lead text-secondary mb-4" style="max-width: 620px; font-size: 1.15rem; line-height: 1.6;">
+                        An energy grid forecasting system built from probability theory and Machine Learning fundamentals alone: Bayes' rule, conditional independence, continuous quantile distributions, and polynomial curve fitting. No black box. Every prediction traces back to mathematical counts.
+                    </p>
+                    <div class="d-flex gap-3 mb-5">
+                        <button class="btn btn-info px-4 py-2 fw-bold text-dark" style="border-radius: 24px;" onclick="showSection('forecaster')">
+                            Predict load & intervals →
+                        </button>
+                        <button class="btn btn-outline-light px-4 py-2" style="border-radius: 24px;" onclick="showSection('bayes')">
+                            See the probability labs
+                        </button>
+                    </div>
+                </div>
+                <div class="col-lg-5 text-center">
+                    <!-- Sine wave / particle canvas animation -->
+                    <canvas id="heroCanvas" width="460" height="380" style="border-radius: 24px; background: rgba(15,23,42,0.6); border: 1px solid #1e293b;"></canvas>
+                    <div class="text-secondary small mt-2">
+                        <span style="color: #38bdf8;">● Diurnal Load Curve</span> &nbsp;
+                        <span style="color: #f97316;">● Solar Noon Peak</span> &nbsp;
+                        <span style="color: #10b981;">● Weibull Wind</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4 Headline Metrics -->
+            <div class="row g-4 my-4">
+                <div class="col-md-3">
+                    <div class="card-custom p-4">
+                        <div class="metric-big text-light" id="head-rows">8,760</div>
+                        <div class="metric-sub">Hourly observations (Full Year 2023)</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card-custom p-4">
+                        <div class="metric-big text-info" id="head-features">8</div>
+                        <div class="metric-sub">Meteorological & calendar features</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card-custom p-4">
+                        <div class="metric-big text-warning" id="head-r2">0.809</div>
+                        <div class="metric-sub">Test R² on unseen winter load</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card-custom p-4">
+                        <div class="metric-big text-success" id="head-cov">89.95%</div>
+                        <div class="metric-sub">90% Empirical Interval Coverage</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 2. DATA SECTION ==================== -->
+        <div id="section-data" class="section-view">
+            <div class="mb-4">
+                <div class="hero-badge">Dataset & Preprocessing</div>
+                <h2 class="fw-bold fs-1">Import, load, view and summarise the data.</h2>
+                <p class="text-secondary">8,760 hourly records spanning electrical load, ambient weather, and renewable power.</p>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3"><div class="card-custom p-3"><div class="fs-4 fw-bold">8,760</div><div class="small text-secondary">Hourly Rows</div></div></div>
+                <div class="col-md-3"><div class="card-custom p-3"><div class="fs-4 fw-bold">8</div><div class="small text-secondary">Columns</div></div></div>
+                <div class="col-md-3"><div class="card-custom p-3"><div class="fs-4 fw-bold text-success">0</div><div class="small text-secondary">Missing Values (after interpolation)</div></div></div>
+                <div class="col-md-3"><div class="card-custom p-3"><div class="fs-4 fw-bold">25.0%</div><div class="small text-secondary">High Demand Base Rate</div></div></div>
+            </div>
+
+            <div class="card-custom p-4 mb-4">
+                <ul class="nav nav-pills mb-3" id="dataTabs">
+                    <li class="nav-item"><button class="nav-link active" onclick="switchDataTab('preview')">Raw rows</button></li>
+                    <li class="nav-item"><button class="nav-link" onclick="switchDataTab('summary')">Summary statistics</button></li>
+                </ul>
+
+                <div id="data-preview-tab">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover small" id="rawTable">
+                            <thead><tr><th>#</th><th>Timestamp</th><th>Demand (MW)</th><th>Temp (°C)</th><th>Solar (MW)</th><th>Wind (MW)</th><th>Humidity (%)</th><th>Hour</th><th>Weekend</th></tr></thead>
+                            <tbody id="rawTableBody"><tr><td colspan="9">Loading dataset...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="data-summary-tab" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover small" id="summaryTable">
+                            <thead><tr><th>Variable</th><th>Mean</th><th>Std Dev</th><th>Min</th><th>Q1 (25%)</th><th>Median</th><th>Q3 (75%)</th><th>Max</th><th>IQR</th><th>Skewness</th></tr></thead>
+                            <tbody id="summaryTableBody"><tr><td colspan="10">Loading summary...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 3. BAYES LAB ==================== -->
+        <div id="section-bayes" class="section-view">
+            <div class="mb-4">
+                <div class="hero-badge">Discrete Random Variables · Bayes' Rule</div>
+                <h2 class="fw-bold fs-1">One fact changes everything.</h2>
+                <p class="text-secondary" style="max-width: 750px;">
+                    Out of 100 random hours, exactly 25 have peak demand (> 27,714 MW). Pick a condition below and watch Bayes' rule update the probability using empirical counts from the dataset.
+                </p>
+            </div>
+
+            <!-- Condition Buttons -->
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                <button class="pill-btn active" onclick="selectBayesCondition('extreme_heat', this)">Extreme heat (> 25°C)</button>
+                <button class="pill-btn" onclick="selectBayesCondition('freezing_cold', this)">Freezing cold (< 5°C)</button>
+                <button class="pill-btn" onclick="selectBayesCondition('solar_noon', this)">Solar noon (11:00-14:00)</button>
+                <button class="pill-btn" onclick="selectBayesCondition('night_time', this)">Night time (00:00-05:00)</button>
+                <button class="pill-btn" onclick="selectBayesCondition('wind_storm', this)">Wind storm (> 14 m/s)</button>
+                <button class="pill-btn" onclick="selectBayesCondition('low_renewable', this)">Low renewable (< 1,200 MW)</button>
+                <button class="pill-btn" onclick="selectBayesCondition('weekend', this)">Weekend</button>
+            </div>
+
+            <div class="row g-4">
+                <!-- Icon Arrays -->
+                <div class="col-lg-6">
+                    <div class="card-custom p-4 h-100">
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="small text-secondary fw-bold">Prior: 100 random hours</span>
+                            <span class="small text-secondary fw-bold">Posterior: 100 hours with fact</span>
+                        </div>
+                        <div class="d-flex justify-content-around align-items-center py-3">
+                            <div>
+                                <div class="icon-grid" id="priorGrid"></div>
+                                <div class="mt-3 text-center">
+                                    <div class="fs-3 fw-bold text-info" id="priorPct">25.0%</div>
+                                    <div class="small text-secondary">P(High Demand)</div>
+                                </div>
+                            </div>
+                            <div class="fs-3 text-secondary">→</div>
+                            <div>
+                                <div class="icon-grid" id="posteriorGrid"></div>
+                                <div class="mt-3 text-center">
+                                    <div class="fs-3 fw-bold text-warning" id="posteriorPct">44.8%</div>
+                                    <div class="small text-secondary">P(High Demand | Fact)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bayes Calculation Card -->
+                <div class="col-lg-6">
+                    <div class="card-custom p-4 h-100">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-calculator me-2 text-info"></i> Bayes' rule, with this data's numbers</h5>
+                        <div class="p-3 rounded bg-dark border border-secondary mb-3 small" style="font-family: monospace;">
+                            <div class="text-secondary mb-1">Evidence from the sum rule, then Bayes' rule:</div>
+                            <div id="bayesMath1" class="text-light">P(F) = P(F|D)P(D) + P(F|~D)P(~D) = ...</div>
+                            <div id="bayesMath2" class="text-warning mt-2 fs-6">P(D|F) = P(F|D)P(D) / P(F) = 44.8%</div>
+                            <div class="text-success mt-2" id="bayesDirect">Counted directly from hours with the fact: 44.8% ✓</div>
+                        </div>
+
+                        <div class="row g-2 text-center">
+                            <div class="col-4">
+                                <div class="card-custom p-2">
+                                    <div class="fs-4 fw-bold text-info" id="bayesRatio">3.04x</div>
+                                    <div class="small text-secondary">Likelihood ratio</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card-custom p-2">
+                                    <div class="fs-4 fw-bold text-warning" id="bayesMultiplier">1.79x</div>
+                                    <div class="small text-secondary">Times base rate</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card-custom p-2">
+                                    <div class="fs-4 fw-bold text-light" id="bayesCount">1,752</div>
+                                    <div class="small text-secondary">Hours with fact</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 4. DISTRIBUTIONS LAB ==================== -->
+        <div id="section-distributions" class="section-view">
+            <div class="mb-4">
+                <div class="hero-badge">Continuous Random Variables · Densities · Quantiles</div>
+                <h2 class="fw-bold fs-1">Electricity demand is a continuous random variable.</h2>
+                <p class="text-secondary">Its probability density was fitted by maximum likelihood and non-parametric KDE. Drag the quantile slider: Q(p) is the demand below which a fraction p of hours fall.</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="card-custom p-4 h-100">
+                        <div class="mb-4">
+                            <label class="form-label d-flex justify-content-between">
+                                <span class="fw-bold">Quantile probability p</span>
+                                <span class="text-info fw-bold" id="quantile-p-val">85%</span>
+                            </label>
+                            <input type="range" class="form-range" id="quantile-slider" min="5" max="99" value="85" oninput="updateQuantile(this.value)">
+                        </div>
+
+                        <div class="card-custom p-3 bg-dark border-secondary mb-3 text-center">
+                            <div class="small text-secondary">Quantile Q(p) Cutoff</div>
+                            <div class="fs-2 fw-bold text-info" id="quantile-result">28,240 MW</div>
+                            <div class="small text-secondary">85% of hours consume less than this</div>
+                        </div>
+
+                        <h6 class="text-secondary fw-bold mt-4 mb-3">Sample Moments</h6>
+                        <div class="row g-2 small">
+                            <div class="col-6"><div class="p-2 card-custom text-center">Mean: <span class="fw-bold" id="mom-mean">24,611 MW</span></div></div>
+                            <div class="col-6"><div class="p-2 card-custom text-center">Std: <span class="fw-bold" id="mom-std">4,535 MW</span></div></div>
+                            <div class="col-6"><div class="p-2 card-custom text-center">Skew: <span class="fw-bold" id="mom-skew">-0.12</span></div></div>
+                            <div class="col-6"><div class="p-2 card-custom text-center">Kurt: <span class="fw-bold" id="mom-kurt">-0.55</span></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="card-custom p-4 h-100">
+                        <h5 class="fw-bold mb-3">Probability Density Function & Empirical Histogram</h5>
+                        <div style="height: 380px;">
+                            <canvas id="densityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 5. CURVE FITTING LAB ==================== -->
+        <div id="section-polyfit" class="section-view">
+            <div class="mb-4">
+                <div class="hero-badge">Polynomial Curve Fitting · Bishop §1.1</div>
+                <h2 class="fw-bold fs-1">Watch a model overfit in real time.</h2>
+                <p class="text-secondary">Dots are electricity demand vs temperature in a training sample. Raise the order M, add regularisation, or add more data, and the polynomial is refitted live by solving (ΦᵀΦ + λI)w = Φᵀt.</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="card-custom p-4 h-100">
+                        <div class="mb-4">
+                            <label class="form-label d-flex justify-content-between">
+                                <span class="fw-bold">Polynomial Order M</span>
+                                <span class="text-info fw-bold" id="poly-deg-val">3</span>
+                            </label>
+                            <input type="range" class="form-range" id="poly-deg" min="1" max="9" value="3" oninput="updatePolyfit()">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label text-secondary small fw-bold">Regularisation ln(λ)</label>
+                            <div class="d-flex gap-2">
+                                <button class="pill-btn active" onclick="setPolyReg(0.0, this)">off</button>
+                                <button class="pill-btn" onclick="setPolyReg(0.001, this)">10⁻³</button>
+                                <button class="pill-btn" onclick="setPolyReg(0.1, this)">10⁻¹</button>
+                                <button class="pill-btn" onclick="setPolyReg(10.0, this)">10¹</button>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label text-secondary small fw-bold">Training Sample Size</label>
+                            <div class="d-flex gap-2">
+                                <button class="pill-btn" onclick="setPolySize(100, this)">100</button>
+                                <button class="pill-btn active" onclick="setPolySize(500, this)">500</button>
+                                <button class="pill-btn" onclick="setPolySize(2000, this)">2,000</button>
+                                <button class="pill-btn" onclick="setPolySize(7000, this)">Full</button>
+                            </div>
+                        </div>
+
+                        <div class="p-3 card-custom bg-dark border-secondary">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Train RMSE:</span>
+                                <span class="fw-bold text-light" id="poly-train-rmse">3,856 MW</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Test RMSE:</span>
+                                <span class="fw-bold text-info" id="poly-test-rmse">3,946 MW</span>
+                            </div>
+                            <div class="badge w-100 p-2 text-center" id="poly-status" style="background: rgba(16,185,129,0.2); color: #10b981;">
+                                Optimal U-curve captured
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="card-custom p-4 h-100">
+                        <h5 class="fw-bold mb-3">Fitted Polynomial Curve vs Test Ground Truth</h5>
+                        <div style="height: 380px;">
+                            <canvas id="polyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 6. FORECASTER / SCREENER ==================== -->
+        <div id="section-forecaster" class="section-view">
+            <div class="mb-4">
+                <div class="hero-badge">Supervised Regression · Uncertainty Intervals</div>
+                <h2 class="fw-bold fs-1">Predict demand. Quantify uncertainty.</h2>
+                <p class="text-secondary">Input weather parameters or click a preset profile to generate a point forecast with 90% empirical prediction intervals.</p>
+            </div>
+
+            <div class="row g-4">
+                <!-- Inputs -->
+                <div class="col-lg-5">
+                    <div class="card-custom p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">Input Parameters</h6>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" data-bs-toggle="dropdown">Preset Profiles</button>
+                                <ul class="dropdown-menu dropdown-menu-dark">
+                                    <li><a class="dropdown-item" onclick="applyPreset('summer')">Summer Heatwave Peak (34°C, 14:00)</a></li>
+                                    <li><a class="dropdown-item" onclick="applyPreset('winter')">Winter Freeze Morning (-3°C, 08:00)</a></li>
+                                    <li><a class="dropdown-item" onclick="applyPreset('spring')">Spring Mild Noon (19°C, 12:00)</a></li>
+                                    <li><a class="dropdown-item" onclick="applyPreset('night')">Night Baseload (12°C, 03:00)</a></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label d-flex justify-content-between small">
+                                <span>Temperature (°C)</span>
+                                <span class="text-info fw-bold" id="f-temp-val">24.0 °C</span>
+                            </label>
+                            <input type="range" class="form-range" id="f-temp" min="-8" max="38" step="0.5" value="24" oninput="runPrediction()">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label d-flex justify-content-between small">
+                                <span>Solar Generation (MW)</span>
+                                <span class="text-warning fw-bold" id="f-solar-val">3,500 MW</span>
+                            </label>
+                            <input type="range" class="form-range" id="f-solar" min="0" max="7500" step="50" value="3500" oninput="runPrediction()">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label d-flex justify-content-between small">
+                                <span>Wind Generation (MW)</span>
+                                <span class="text-info fw-bold" id="f-wind-val">1,200 MW</span>
+                            </label>
+                            <input type="range" class="form-range" id="f-wind" min="0" max="9500" step="50" value="1200" oninput="runPrediction()">
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small">Hour (0-23)</label>
+                                <input type="number" class="form-control form-control-sm bg-dark text-light border-secondary" id="f-hour" min="0" max="23" value="14" onchange="runPrediction()">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Month (1-12)</label>
+                                <input type="number" class="form-control form-control-sm bg-dark text-light border-secondary" id="f-month" min="1" max="12" value="7" onchange="runPrediction()">
+                            </div>
+                        </div>
+
+                        <div class="form-check form-switch pt-2">
+                            <input class="form-check-input" type="checkbox" id="f-weekend" onchange="runPrediction()">
+                            <label class="form-check-label small" for="f-weekend">Weekend Load Reduction</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prediction & Intervals -->
+                <div class="col-lg-7">
+                    <div class="card-custom p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <span class="text-secondary small fw-bold">CALIBRATED FORECAST RESULT</span>
+                            <span class="badge bg-warning text-dark px-3 py-1 fw-bold" id="f-state">State 2: High Demand</span>
+                        </div>
+
+                        <div class="row align-items-baseline mb-4">
+                            <div class="col-auto">
+                                <div class="metric-big text-light" id="f-pred">28,712 MW</div>
+                            </div>
+                            <div class="col text-end">
+                                <span class="badge bg-danger p-2" id="f-prob">P(High Demand): 74.0%</span>
+                            </div>
+                        </div>
+
+                        <!-- 90% Confidence Interval Bar -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between small text-secondary mb-1">
+                                <span>Lower 90% Bound: <b class="text-info" id="f-lower">25,952 MW</b></span>
+                                <span>Upper 90% Bound: <b class="text-info" id="f-upper">30,788 MW</b></span>
+                            </div>
+                            <div class="band-container">
+                                <div class="band-interval" id="f-band" style="left: 35%; width: 40%;"></div>
+                                <div class="band-point" id="f-point" style="left: 55%;"></div>
+                            </div>
+                            <div class="d-flex justify-content-between text-secondary small mt-1">
+                                <span>10,000 MW</span>
+                                <span>Width: <b class="text-info" id="f-width">4,835 MW</b></span>
+                                <span>40,000 MW</span>
+                            </div>
+                        </div>
+
+                        <h6 class="text-secondary fw-bold mb-2">Feature Shift Breakdown (Δ MW Contribution)</h6>
+                        <div id="f-contrib-list" class="small">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 7. REPORT TAB ==================== -->
+        <div id="section-report" class="section-view">
+            <div class="mb-4">
+                <div class="hero-badge">Validation & Test Report</div>
+                <h2 class="fw-bold fs-1">How good is it, honestly?</h2>
+                <p class="text-secondary">The test set (1,752 hours) was locked away until the very end. Every metric below comes from mathematical functions tested against Scikit-learn.</p>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-3"><div class="card-custom p-4"><div class="metric-big text-warning">0.809</div><div class="metric-sub">Test R² Score</div></div></div>
+                <div class="col-md-3"><div class="card-custom p-4"><div class="metric-big text-info">1,570 MW</div><div class="metric-sub">Test RMSE</div></div></div>
+                <div class="col-md-3"><div class="card-custom p-4"><div class="metric-big text-success">89.95%</div><div class="metric-sub">90% Interval Coverage</div></div></div>
+                <div class="col-md-3"><div class="card-custom p-4"><div class="metric-big text-light">0.00e+00</div><div class="metric-sub">max |w_ours - w_sklearn|</div></div></div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card-custom p-4">
+                        <h5 class="fw-bold mb-3">Actual vs Predicted Demand Tracking</h5>
+                        <img src="/figures/10_actual_vs_predicted_demand.png" class="img-fluid rounded" alt="Parity Plot">
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card-custom p-4">
+                        <h5 class="fw-bold mb-3">Prediction Interval & Uncertainty Band</h5>
+                        <img src="/figures/12_prediction_interval_uncertainty.png" class="img-fluid rounded" alt="Uncertainty Plot">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 8. ALL GRAPHS GALLERY ==================== -->
+        <div id="section-graphs" class="section-view">
+            <div class="mb-4">
+                <div class="hero-badge">Gallery & Visualizations</div>
+                <h2 class="fw-bold fs-1">12 graphs. Every one explained.</h2>
+                <p class="text-secondary">Explore all project visualizations with tabs explaining what they show, how they are computed, how to read them, and real-world grid use.</p>
+            </div>
+
+            <div class="row g-4" id="graphsGrid">
+                <!-- Dynamically populated from /api/graphs -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let densityChartInstance = null;
+        let polyChartInstance = null;
+        let polyReg = 0.0;
+        let polySize = 500;
+
+        function showSection(name) {
+            document.querySelectorAll('.section-view').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+            
+            const target = document.getElementById('section-' + name);
+            if (target) target.classList.add('active');
+
+            // Set nav active
+            document.querySelectorAll('.navbar-nav .nav-link').forEach(link => {
+                if (link.getAttribute('onclick') && link.getAttribute('onclick').includes(name)) {
+                    link.classList.add('active');
+                }
+            });
+
+            if (name === 'distributions') updateQuantile(85);
+            if (name === 'polyfit') updatePolyfit();
+            if (name === 'data') loadDataPreview();
+            if (name === 'graphs') loadGraphsGallery();
+            if (name === 'forecaster') runPrediction();
+        }
+
+        // --- Data Tab ---
+        function switchDataTab(tab) {
+            document.getElementById('data-preview-tab').style.display = tab === 'preview' ? 'block' : 'none';
+            document.getElementById('data-summary-tab').style.display = tab === 'summary' ? 'block' : 'none';
+            document.querySelectorAll('#dataTabs .nav-link').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function loadDataPreview() {
+            fetch('/api/data/preview?limit=15')
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.getElementById('rawTableBody');
+                    tbody.innerHTML = '';
+                    data.rows.forEach((r, idx) => {
+                        tbody.innerHTML += `<tr>
+                            <td>${idx + 1}</td>
+                            <td>${r.timestamp}</td>
+                            <td class="text-info fw-bold">${r.electricity_demand_mw.toFixed(1)}</td>
+                            <td>${r.temperature_celsius.toFixed(1)}</td>
+                            <td>${r.solar_generation_mw.toFixed(0)}</td>
+                            <td>${r.wind_generation_mw.toFixed(0)}</td>
+                            <td>${r.humidity_percent.toFixed(1)}</td>
+                            <td>${r.hour}</td>
+                            <td>${r.is_weekend ? '<span class="badge bg-warning text-dark">Yes</span>' : '<span class="badge bg-secondary">No</span>'}</td>
+                        </tr>`;
+                    });
+                });
+
+            fetch('/api/data/summary')
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.getElementById('summaryTableBody');
+                    tbody.innerHTML = '';
+                    for (let [k, v] of Object.entries(data)) {
+                        tbody.innerHTML += `<tr>
+                            <td class="fw-bold text-info">${k}</td>
+                            <td>${v.mean.toFixed(2)}</td>
+                            <td>${v.std.toFixed(2)}</td>
+                            <td>${v.min.toFixed(2)}</td>
+                            <td>${v.p25.toFixed(2)}</td>
+                            <td>${v.median.toFixed(2)}</td>
+                            <td>${v.p75.toFixed(2)}</td>
+                            <td>${v.max.toFixed(2)}</td>
+                            <td>${v.iqr.toFixed(2)}</td>
+                            <td>${v.skewness.toFixed(3)}</td>
+                        </tr>`;
+                    }
+                });
+        }
+
+        // --- Bayes Lab ---
+        function selectBayesCondition(cond, btn) {
+            document.querySelectorAll('#section-bayes .pill-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            fetch('/api/stats/probability?condition=' + cond)
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('priorPct').innerText = (d.prior * 100).toFixed(1) + '%';
+                    document.getElementById('posteriorPct').innerText = (d.posterior * 100).toFixed(1) + '%';
+                    document.getElementById('bayesRatio').innerText = d.likelihood ? d.likelihood.toFixed(2) + 'x' : '1.0x';
+                    document.getElementById('bayesMultiplier').innerText = d.risk_multiplier.toFixed(2) + 'x';
+                    document.getElementById('bayesCount').innerText = d.evidence_count.toLocaleString();
+
+                    // Update math
+                    document.getElementById('bayesMath1').innerText = `Evidence: P(F) = ${(d.evidence * 100).toFixed(1)}% (${d.evidence_count} hours)`;
+                    document.getElementById('bayesMath2').innerText = `P(High Demand | Fact) = [${(d.likelihood * 100).toFixed(1)}% × ${(d.prior * 100).toFixed(1)}%] / ${(d.evidence * 100).toFixed(1)}% = ${(d.posterior * 100).toFixed(1)}%`;
+                    document.getElementById('bayesDirect').innerText = `Direct empirical check from subset: ${(d.direct_check * 100).toFixed(1)}% ✓`;
+
+                    // Render Icon Grids
+                    renderIconGrid('priorGrid', Math.round(d.prior * 100), 'active-prior');
+                    renderIconGrid('posteriorGrid', Math.round(d.posterior * 100), 'active-posterior');
+                });
+        }
+
+        function renderIconGrid(id, activeCount, activeClass) {
+            const container = document.getElementById(id);
+            container.innerHTML = '';
+            for (let i = 0; i < 100; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'grid-dot' + (i < activeCount ? ' ' + activeClass : '');
+                container.appendChild(dot);
+            }
+        }
+
+        // --- Distributions Lab ---
+        function updateQuantile(val) {
+            document.getElementById('quantile-p-val').innerText = val + '%';
+            const p = parseFloat(val) / 100.0;
+
+            fetch(`/api/stats/distributions?variable=electricity_demand_mw&quantile_p=${p}`)
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('quantile-result').innerText = Math.round(d.quantile_value).toLocaleString() + ' MW';
+                    document.getElementById('mom-mean').innerText = Math.round(d.moments.mean).toLocaleString() + ' MW';
+                    document.getElementById('mom-std').innerText = Math.round(d.moments.std_dev).toLocaleString() + ' MW';
+                    document.getElementById('mom-skew').innerText = d.moments.skewness.toFixed(2);
+                    document.getElementById('mom-kurt').innerText = d.moments.kurtosis.toFixed(2);
+
+                    // Render Density Chart
+                    const ctx = document.getElementById('densityChart').getContext('2d');
+                    if (densityChartInstance) densityChartInstance.destroy();
+
+                    densityChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: d.bin_centers.map(x => Math.round(x)),
+                            datasets: [
+                                {
+                                    label: 'KDE Density',
+                                    data: d.kde_density,
+                                    borderColor: '#06b6d4',
+                                    borderWidth: 2.5,
+                                    fill: true,
+                                    backgroundColor: 'rgba(6, 182, 212, 0.15)',
+                                    pointRadius: 0
+                                },
+                                {
+                                    label: 'Fitted Gaussian N(μ, σ)',
+                                    data: d.gaussian_density,
+                                    borderColor: '#f97316',
+                                    borderDash: [5, 5],
+                                    borderWidth: 2,
+                                    pointRadius: 0
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { labels: { color: '#94a3b8' } } },
+                            scales: {
+                                x: { ticks: { color: '#94a3b8', maxTicksLimit: 10 }, grid: { color: '#1e293b' } },
+                                y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } }
+                            }
+                        }
+                    });
+                });
+        }
+
+        // --- Polynomial Lab ---
+        function setPolyReg(val, btn) {
+            polyReg = val;
+            btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updatePolyfit();
+        }
+
+        function setPolySize(val, btn) {
+            polySize = val;
+            btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updatePolyfit();
+        }
+
+        function updatePolyfit() {
+            const deg = document.getElementById('poly-deg').value;
+            document.getElementById('poly-deg-val').innerText = deg;
+
+            fetch(`/api/polyfit?degree=${deg}&regularization=${polyReg}&sample_size=${polySize}`)
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('poly-train-rmse').innerText = Math.round(d.train_rmse).toLocaleString() + ' MW';
+                    document.getElementById('poly-test-rmse').innerText = Math.round(d.test_rmse).toLocaleString() + ' MW';
+
+                    const status = document.getElementById('poly-status');
+                    if (d.is_overfitting) {
+                        status.innerText = 'Overfitting: chasing noise!';
+                        status.style.background = 'rgba(239, 68, 68, 0.2)';
+                        status.style.color = '#ef4444';
+                    } else if (deg == 1) {
+                        status.innerText = 'Underfitting: high bias';
+                        status.style.background = 'rgba(245, 158, 11, 0.2)';
+                        status.style.color = '#f59e0b';
+                    } else {
+                        status.innerText = 'Optimal fit (U-curve captured)';
+                        status.style.background = 'rgba(16, 185, 129, 0.2)';
+                        status.style.color = '#10b981';
+                    }
+
+                    const ctx = document.getElementById('polyChart').getContext('2d');
+                    if (polyChartInstance) polyChartInstance.destroy();
+
+                    polyChartInstance = new Chart(ctx, {
+                        type: 'scatter',
+                        data: {
+                            datasets: [
+                                {
+                                    label: 'Training Points',
+                                    data: d.scatter_x.map((x, i) => ({ x: x, y: d.scatter_y[i] })),
+                                    backgroundColor: 'rgba(148, 163, 184, 0.45)',
+                                    pointRadius: 4
+                                },
+                                {
+                                    type: 'line',
+                                    label: `Fitted Polynomial (M=${deg})`,
+                                    data: d.curve_x.map((x, i) => ({ x: x, y: d.curve_y[i] })),
+                                    borderColor: d.is_overfitting ? '#ef4444' : '#10b981',
+                                    borderWidth: 3,
+                                    pointRadius: 0
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { labels: { color: '#94a3b8' } } },
+                            scales: {
+                                x: { title: { display: true, text: 'Temperature (°C)', color: '#94a3b8' }, ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+                                y: { title: { display: true, text: 'Electricity Demand (MW)', color: '#94a3b8' }, ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } }
+                            }
+                        }
+                    });
+                });
+        }
+
+        // --- Forecaster ---
+        function runPrediction() {
+            const temp = parseFloat(document.getElementById('f-temp').value);
+            const solar = parseFloat(document.getElementById('f-solar').value);
+            const wind = parseFloat(document.getElementById('f-wind').value);
+            const hour = parseInt(document.getElementById('f-hour').value);
+            const month = parseInt(document.getElementById('f-month').value);
+            const weekend = document.getElementById('f-weekend').checked ? 1 : 0;
+
+            document.getElementById('f-temp-val').innerText = temp.toFixed(1) + ' °C';
+            document.getElementById('f-solar-val').innerText = Math.round(solar).toLocaleString() + ' MW';
+            document.getElementById('f-wind-val').innerText = Math.round(wind).toLocaleString() + ' MW';
+
+            fetch('/api/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    temperature: temp,
+                    solar_generation: solar,
+                    wind_generation: wind,
+                    hour: hour,
+                    month: month,
+                    day_of_week: weekend ? 6 : 2,
+                    is_weekend: weekend
+                })
+            })
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('f-pred').innerText = Math.round(d.predicted_demand).toLocaleString() + ' MW';
+                document.getElementById('f-lower').innerText = Math.round(d.lower_90).toLocaleString() + ' MW';
+                document.getElementById('f-upper').innerText = Math.round(d.upper_90).toLocaleString() + ' MW';
+                document.getElementById('f-width').innerText = Math.round(d.upper_90 - d.lower_90).toLocaleString() + ' MW';
+                document.getElementById('f-state').innerText = d.demand_category;
+                document.getElementById('f-prob').innerText = 'P(High Demand): ' + (d.prob_high_demand * 100).toFixed(1) + '%';
+
+                // Bar position
+                const minScale = 10000, maxScale = 40000;
+                const leftPct = Math.max(0, Math.min(100, ((d.lower_90 - minScale) / (maxScale - minScale)) * 100));
+                const widthPct = Math.max(1, Math.min(100, ((d.upper_90 - d.lower_90) / (maxScale - minScale)) * 100));
+                const ptPct = Math.max(0, Math.min(100, ((d.predicted_demand - minScale) / (maxScale - minScale)) * 100));
+
+                document.getElementById('f-band').style.left = leftPct + '%';
+                document.getElementById('f-band').style.width = widthPct + '%';
+                document.getElementById('f-point').style.left = ptPct + '%';
+
+                // Render contributions
+                const cList = document.getElementById('f-contrib-list');
+                cList.innerHTML = '';
+                d.contributions.slice(0, 5).forEach(c => {
+                    const isPos = c.delta_mw >= 0;
+                    cList.innerHTML += `<div class="d-flex justify-content-between py-1 border-bottom border-secondary">
+                        <span class="text-secondary">${c.feature}</span>
+                        <span class="${isPos ? 'text-danger' : 'text-success'} fw-bold">${isPos ? '+' : ''}${Math.round(c.delta_mw).toLocaleString()} MW (${c.multiplier.toFixed(2)}x)</span>
+                    </div>`;
+                });
+            });
+        }
+
+        function applyPreset(type) {
+            if (type === 'summer') {
+                document.getElementById('f-temp').value = 34.0;
+                document.getElementById('f-solar').value = 5200;
+                document.getElementById('f-wind').value = 400;
+                document.getElementById('f-hour').value = 14;
+                document.getElementById('f-month').value = 7;
+                document.getElementById('f-weekend').checked = false;
+            } else if (type === 'winter') {
+                document.getElementById('f-temp').value = -3.0;
+                document.getElementById('f-solar').value = 0;
+                document.getElementById('f-wind').value = 1800;
+                document.getElementById('f-hour').value = 8;
+                document.getElementById('f-month').value = 1;
+                document.getElementById('f-weekend').checked = false;
+            } else if (type === 'spring') {
+                document.getElementById('f-temp').value = 19.0;
+                document.getElementById('f-solar').value = 3200;
+                document.getElementById('f-wind').value = 2200;
+                document.getElementById('f-hour').value = 12;
+                document.getElementById('f-month').value = 4;
+                document.getElementById('f-weekend').checked = false;
+            } else if (type === 'night') {
+                document.getElementById('f-temp').value = 12.0;
+                document.getElementById('f-solar').value = 0;
+                document.getElementById('f-wind').value = 800;
+                document.getElementById('f-hour').value = 3;
+                document.getElementById('f-month').value = 5;
+                document.getElementById('f-weekend').checked = true;
+            }
+            runPrediction();
+        }
+
+        // --- All Graphs Gallery ---
+        function loadGraphsGallery() {
+            fetch('/api/graphs')
+                .then(r => r.json())
+                .then(graphs => {
+                    const grid = document.getElementById('graphsGrid');
+                    grid.innerHTML = '';
+                    graphs.forEach(g => {
+                        grid.innerHTML += `
+                        <div class="col-lg-6">
+                            <div class="card-custom p-3 h-100">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold mb-0 text-info">${g.title}</h6>
+                                    <span class="badge bg-secondary small">${g.topic}</span>
+                                </div>
+                                <img src="${g.image}" class="img-fluid rounded mb-3 border border-secondary" alt="${g.title}">
+                                <div class="small">
+                                    <ul class="nav nav-tabs nav-tabs-sm border-secondary mb-2" id="tab-${g.id}">
+                                        <li class="nav-item"><button class="nav-link active small py-1 px-2" onclick="switchGraphTab('${g.id}', 'shows', this)">What it shows</button></li>
+                                        <li class="nav-item"><button class="nav-link small py-1 px-2" onclick="switchGraphTab('${g.id}', 'comp', this)">How computed</button></li>
+                                        <li class="nav-item"><button class="nav-link small py-1 px-2" onclick="switchGraphTab('${g.id}', 'read', this)">How to read</button></li>
+                                        <li class="nav-item"><button class="nav-link small py-1 px-2" onclick="switchGraphTab('${g.id}', 'used', this)">Where used</button></li>
+                                    </ul>
+                                    <div id="content-${g.id}" class="text-secondary p-2 bg-dark rounded border border-secondary" style="min-height: 60px;">
+                                        ${g.what_it_shows}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                });
+        }
+
+        function switchGraphTab(gid, type, btn) {
+            const container = document.getElementById(`content-${gid}`);
+            btn.parentElement.parentElement.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            fetch(`/api/graphs/${gid}`)
+                .then(r => r.json())
+                .then(g => {
+                    if (type === 'shows') container.innerText = g.what_it_shows;
+                    else if (type === 'comp') container.innerText = g.how_computed;
+                    else if (type === 'read') container.innerText = g.how_to_read;
+                    else if (type === 'used') container.innerText = g.where_used;
+                });
+        }
+
+        // --- Hero Canvas Wave Animation ---
+        function initHeroCanvas() {
+            const canvas = document.getElementById('heroCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let t = 0;
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Wave 1: Demand load wave (cyan)
+                ctx.beginPath();
+                ctx.strokeStyle = '#06b6d4';
+                ctx.lineWidth = 3;
+                for (let x = 0; x < canvas.width; x++) {
+                    const y = 190 + Math.sin(x * 0.02 + t) * 45 + Math.cos(x * 0.008 + t * 0.5) * 25;
+                    if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                // Wave 2: Solar noon bell wave (orange)
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(249, 115, 22, 0.7)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                for (let x = 0; x < canvas.width; x++) {
+                    const y = 240 + Math.sin(x * 0.015 + t * 1.2) * 35;
+                    if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Uncertainty envelope (transparent fill)
+                ctx.beginPath();
+                ctx.fillStyle = 'rgba(6, 182, 212, 0.08)';
+                for (let x = 0; x < canvas.width; x++) {
+                    const yTop = 160 + Math.sin(x * 0.02 + t) * 45;
+                    if (x === 0) ctx.moveTo(x, yTop); else ctx.lineTo(x, yTop);
+                }
+                for (let x = canvas.width - 1; x >= 0; x--) {
+                    const yBot = 220 + Math.sin(x * 0.02 + t) * 45;
+                    ctx.lineTo(x, yBot);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                t += 0.02;
+                requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        // --- Initialize on Page Load ---
+        window.onload = function() {
+            initHeroCanvas();
+            selectBayesCondition('extreme_heat', document.querySelector('#section-bayes .pill-btn'));
+        };
+    </script>
+</body>
+</html>
